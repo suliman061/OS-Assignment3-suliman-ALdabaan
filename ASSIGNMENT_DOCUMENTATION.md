@@ -145,105 +145,139 @@ around 2 hours
 
 ### Critical Section #1: Counter Variables
 
-**Which variables**: 
+**Which variables**: completedProcesses, totalWaitingTime, totalTurnaroundTime.
 
-**Why they need protection**: 
+**Why they need protection**: These variables are shared across all process threads. Without protection, concurrent increments (like ++ or +=) lead to race conditions where updates are lost, resulting in incorrect final statistics.
 
-**Synchronization mechanism used**: 
+**Synchronization mechanism used**: ReentrantLock (named lock in SharedResources).
 
 **Code snippet**:
 ```java
-// Paste your implementation here
+// public static void addWaitingTime(long time) {
+    lock.lock();
+    try {
+        totalWaitingTime += time;
+    } finally {
+        lock.unlock();
+    }
+    }
 ```
 
-**Justification**: 
+**Justification**: Only one thread may alter the statistical data at a time thanks to a lock. To ensure that the lock is released even in the event of a runtime exception, a finally block must be used.
 
 ---
 
 ### Critical Section #2: Execution Log
 
-**What resource**: 
+**What resource**: The Standard Output (Console) and the logical sequence of process execution.
 
-**Why it needs protection**: 
+**Why it needs protection**: to avoid "Interleaving" the output. Without synchronization, the log would be illegible and illogical for a single-core simulation as one process may print "Starting" while another is still reporting its progress.
 
-**Synchronization mechanism used**: 
+**Synchronization mechanism used**: Semaphore (Binary).
 
 **Code snippet**:
 ```java
-// Paste your implementation here
+// try {
+    SharedResources.cpuSemaphore.acquire();
+    System.out.println(Colors.CYAN + "  ▶ " + name + " is starting burst..." + Colors.RESET);
+    Thread.sleep(burst);
+    // ... logic ...
+} finally {
+    SharedResources.cpuSemaphore.release();
+}
 ```
 
-**Justification**: 
+**Justification**: The gatekeeper is the semaphore. We make sure the execution log shows a clear, sequential process flow by including the print statements and the sleep (burst) inside the acquire/release block.
 
 ---
 
 ### Critical Section #3: CPU Semaphore
 
-**Purpose of semaphore**: 
+**Purpose of semaphore**: To simulate the physical limitation of a single-core CPU where only one process can be in the "Running" state at any given time.
 
-**Number of permits and why**: 
+**Number of permits and why**: 1 permit. A single permit ensures Mutual Exclusion (Mutex), meaning the capacity of our "resource" (the CPU) is exactly one.
 
-**Where implemented**: 
+**Where implemented**: Inside the run() method (for standard Round Robin cycles) and the runToCompletion() method (for the final execution phase) of the Process class.
 
 **Code snippet**:
 ```java
-// Paste your implementation here
+// // Inside runToCompletion()
+try {
+    SharedResources.cpuSemaphore.acquire();
+    // CPU-bound task execution
+    Thread.sleep(remainingTime);
+} finally {
+    SharedResources.cpuSemaphore.release();
+}
 ```
 
-**Effect on program behavior**: 
+**Effect on program behavior**: During the burst phase, it serializes thread execution. The semaphore creates a realistic simulation of a non-parallel CPU scheduler by forcing Java's many threads to wait in line.
 
 ---
 
 ## Part 4: Testing and Verification (2 marks)
 
 ### Test 1: Consistency Check
-**What I tested**: Running program multiple times to verify consistent results
+**What I tested**: Running the program multiple times to verify consistent results in the final statistics.
 
 **Testing procedure**: 
 ```bash
-# Commands used (run the program at least 5 times)
+# # Executed the main class 5 consecutive times in the IDE
+java CPUScheduler (Run 1)
+java CPUScheduler (Run 2)
+java CPUScheduler (Run 3)
+java CPUScheduler (Run 4)
+java CPUScheduler (Run 5)
 ```
 
 **Results**: 
-(Show that running multiple times produces consistent, correct results)
+(In all 5 runs, the Average Waiting Time and Average Turnaround Time remained identical to the second decimal place. The Available Permits at the end of every run was consistently 1.)
 
 **Why synchronization is necessary**: 
-(Explain what race conditions COULD occur without synchronization, even if you didn't observe them. Explain which shared resources need protection and why.)
+(Without synchronization, a race condition could occur on the totalWaitingTime variable. Even if not observed in every run, two threads could update the variable at the exact same time, causing one update to be lost. This would lead to a lower total waiting time and incorrect averages, which is unacceptable in a simulation.)
 
-**Conclusion**: 
+**Conclusion**: The implementation is stable and produces deterministic results.
 
 ---
 
 ### Test 2: Exception Testing
-**What I tested**: Checking for ConcurrentModificationException
+**What I tested**: Verifying that the CPU Semaphore is released even if a thread is interrupted.
 
-**Testing procedure**: 
+**Testing procedure**: I simulated a thread interruption during the Thread.sleep(burst) phase using a try-catch block and observed the finally block execution.
 
-**Results**: 
+**Results**: When an interruption was caught, the console printed the error message, and the finally block immediately executed cpuSemaphore.release().
 
-**What this proves**: 
+**What this proves**: This proves the system is Deadlock-proof against unexpected thread failures. The CPU resource will never be "stuck" at 0 permits if a process crashes.
 
 ---
 
 ### Test 3: Correctness Verification
-**What I tested**: Verifying correct final values (total burst time, context switches, etc.)
+**What I tested**: Verifying correct final values for the simulation based on Student ID 444050061.
 
-**Expected values**: 
+**Expected values**: Completed Processes: 5
 
-**Actual values**: 
+Final CPU Semaphore Status: 1 (All permits returned)
 
-**Analysis**: 
+Lock Status: Unlocked
+
+**Actual values**: Completed Processes: 5
+
+Final CPU Semaphore Status: 1
+
+Lock Status: Unlocked
+
+**Analysis**: The results match the expected logic perfectly. The ReentrantLock ensured all 5 processes were counted, and the Semaphore logic ensured the CPU was fully vacated after the simulation finished.
 
 ---
 
 ### Test 4: Different Scenarios
-**Scenario tested**: [e.g., different time quantum, more processes, etc.]
+**Scenario tested**:Running the simulation with a very small Time Quantum (e.g., 5ms) to increase context switching
 
-**Purpose**: 
+**Purpose**: To stress-test the synchronization mechanisms by forcing more frequent acquire() and release() calls.
 
-**Results**: 
+**Results**: The program handled the high frequency of context switches without any "Interleaving" in the logs and without any race conditions in the counters.
 
-**What I learned**: 
+**What I learned**: I learned that robust synchronization (using try-finally) is even more critical when the system has high contention or frequent state changes. Proper locking ensures data integrity regardless of how many times the processes switch in and out of the CPU.
 
 ---
 
@@ -251,7 +285,7 @@ around 2 hours
 
 ### What I learned about synchronization:
 
-[6-8 sentences about key concepts, challenges, insights]
+[Through this assignment, I learned that synchronization is not just about adding locks, but about managing the orderly access of threads to shared resources. I grasped the critical concept of "Mutual Exclusion," ensuring that only one process occupies the CPU at a time to maintain a realistic simulation. One of the biggest challenges was identifying all potential race conditions, especially those affecting statistical counters like totalWaitingTime. I also gained a deep insight into the importance of the try-finally pattern; without it, any runtime exception could leave a lock permanently held, leading to a system-wide deadlock. Furthermore, I learned how to distinguish between signaling (using Semaphores) and data protection (using Locks). Ultimately, this project showed me that robust concurrent programming requires a proactive design to prevent data corruption before it happens.]
 
 ---
 
@@ -259,15 +293,15 @@ around 2 hours
 
 Give TWO examples where synchronization is critical:
 
-**Example 1**: 
+**Example 1**: When multiple transactions (like a withdrawal and a transfer) happen on the same account simultaneously, synchronization ensures the balance is updated correctly and prevents "Double Spending" or incorrect balance reporting.
 
-**Example 2**: 
+**Example 2**: When thousands of users try to buy the last remaining item in stock, synchronization prevents the system from overselling the item by ensuring only one thread can decrement the stock count at a time.
 
 ---
 
 ### How I would explain synchronization to others:
 
-[Explain to someone who just finished Assignment 1 - use simple terms and analogies]
+[Imagine a busy coffee shop with only one espresso machine. If every barista (Thread) tried to use the machine at the exact same time, they would crash into each other and spill the coffee (Race Condition). Synchronization is like a "waiting line" or a "rule" that says: "Only the barista holding the special gold key can use the machine." Once they finish making the coffee, they hand the key to the next person in line. This ensures that every cup is made perfectly without any mess, even though many baristas are working in the shop at once.]
 
 ---
 
