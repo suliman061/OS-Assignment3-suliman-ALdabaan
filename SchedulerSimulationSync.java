@@ -117,10 +117,42 @@ class Process implements Runnable {
         // TODO #3: Acquire CPU semaphore before executing
         // This ensures only allowed number of processes run simultaneously
 
-        try {
-            if (startTime == -1) {
-                startTime = System.currentTimeMillis();
-            }
+       try {
+        SharedResources.cpuSemaphore.acquire(); 
+
+        if (startTime == -1) {
+            startTime = System.currentTimeMillis();
+        }
+
+        long runTime = Math.min(remainingTime, 20);
+        
+        SharedResources.logExecution("  [Run] " + name + " is running for " + runTime + "ms");
+        
+        Thread.sleep(runTime);
+        
+        remainingTime -= runTime;
+
+        if (remainingTime <= 0) {
+            completionTime = System.currentTimeMillis();
+            long waitingTime = (completionTime - creationTime) - burstTime;
+            
+            SharedResources.addWaitingTime(waitingTime);
+            SharedResources.incrementCompletedProcess();
+            
+            SharedResources.logExecution("  [Done] " + name + " finished execution.");
+        } else {
+            SharedResources.incrementContextSwitch();
+            SharedResources.logExecution("  [Wait] " + name + " quantum finished, returning to queue.");
+        }
+
+    } catch (InterruptedException e) {
+        Thread.currentThread().interrupt();
+    } finally {
+            SharedResources.cpuSemaphore.release();
+        }
+    
+            
+
 
             // Increment context switch counter
             SharedResources.incrementContextSwitch();
@@ -176,11 +208,8 @@ class Process implements Runnable {
             }
             System.out.println();
 
-        } finally {
-            // TODO #4: Release CPU semaphore here
-            // Always release in finally block to prevent deadlocks!
-        }
-    }
+        } 
+    
 
     private String createProgressBar(int progress, int width) {
         int filled = (progress * width) / 100;
