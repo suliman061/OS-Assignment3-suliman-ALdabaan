@@ -2,7 +2,7 @@
 
 **Student Name**: [Suliman ahmed ALdabaan]  
 **Student ID**: [444050061]  
-**Date Submitted**: []
+**Date Submitted**: [2 MAY]
 
 ---
 
@@ -14,9 +14,9 @@
 > Set sharing to "Anyone with the link can view".
 > Test the link in incognito/private mode before submitting.
 
-**Video Link**: [Paste your personal Gmail Google Drive link here]
+**Video Link**: https://drive.google.com/drive/folders/1njMUzRbsDUodf0rduaFvwHnaDqiEqjhN?dmr=1&ec=wgc-drive-%5Bmodule%5D-goto
 
-**Video filename**: `[YourStudentID]_Assignment3_Synchronization.mp4`
+**Video filename**: `[444050061]_Assignment3_Synchronization.mp4`
 
 **Verification**:
 - [ ] Link is accessible (tested in incognito mode)
@@ -307,30 +307,30 @@ Give TWO examples where synchronization is critical:
 
 ## Part 6: GitHub Repository Information
 
-**Repository URL**: 
+**Repository URL**: https://github.com/suliman061/OS-Assignment3-suliman-ALdabaan.git
 
-**Number of commits**: 
+**Number of commits**: 7
 
 **Commit messages**: 
-1. 
-2. 
-3. 
-4. 
+1. added locks and semaphore to shared resources and import package for both of them
+2. protecting counters using mutex locks
+3. implementing cpu semaphore to prevent process overlapping and changed finally postion
+4. Finalizing synchronization for all process execution paths
 
 ---
 
 ## Summary
 
-**Total time spent on assignment**: 
+**Total time spent on assignment**: 7 hours
 
 **Key takeaways**: 
-1. 
-2. 
-3. 
+1. Race conditions can lead to silent but catastrophic data corruption in multi-threaded environments.
+2. The finally block is the most reliable way to prevent deadlocks by ensuring resource release.
+3. Proper synchronization creates deterministic and consistent behavior in otherwise unpredictable thread executions.
 
-**Most challenging aspect**: 
+**Most challenging aspect**: Ensuring that the runToCompletion() method—which is an edge-case execution path—was perfectly synchronized with the main run() method so they never overlapped.
 
-**What I'm most proud of**: 
+**What I'm most proud of**: Achieving a "Clean Exit" where the final audit shows exactly 1 available permit, proving that my resource management logic is 100% leak-proof.
 
 ---
 
